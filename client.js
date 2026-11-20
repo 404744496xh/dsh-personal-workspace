@@ -29,6 +29,13 @@
       binding: '绑定中…',
       sync: '立即同步',
       syncing: '同步中…',
+      autoSync: '自动同步',
+      autoSyncHint: '开启后按间隔自动双向同步（拉取 Halo 变更 + 推送本地改动），配置会持久保存。',
+      autoInterval: '同步间隔（秒）',
+      autoOn: '已开启',
+      autoOff: '已关闭',
+      autoSaved: '自动同步设置已保存。',
+      autoMinHint: '间隔最小 30 秒',
       refresh: '刷新',
       mirror: '本地镜像',
       mirrorHint: '读取走本地镜像，写入先落镜像，再由同步推送到 Halo。',
@@ -67,6 +74,13 @@
       binding: 'Binding…',
       sync: 'Sync now',
       syncing: 'Syncing…',
+      autoSync: 'Auto-sync',
+      autoSyncHint: 'When enabled, syncs both ways on an interval (pull Halo changes + push local edits). Settings persist across restarts.',
+      autoInterval: 'Interval (seconds)',
+      autoOn: 'On',
+      autoOff: 'Off',
+      autoSaved: 'Auto-sync settings saved.',
+      autoMinHint: 'Minimum 30 seconds',
       refresh: 'Refresh',
       mirror: 'Local mirror',
       mirrorHint: 'Reads come from the local mirror; writes land there first and are pushed to Halo on sync.',
@@ -261,19 +275,30 @@
       const [busy, setBusy] = useState(false);
       const [bindBusy, setBindBusy] = useState(false);
       const [toast, setToast] = useState(null);
+      const [autoEnabled, setAutoEnabled] = useState(false);
+      const [autoInterval, setAutoInterval] = useState(120);
+      const [autoBusy, setAutoBusy] = useState(false);
+
+      const applyAuto = useCallback((json) => {
+        if (json?.autoSync) {
+          setAutoEnabled(Boolean(json.autoSync.enabled));
+          setAutoInterval(Number(json.autoSync.intervalSec) || 120);
+        }
+      }, []);
 
       const refresh = useCallback(async () => {
         try {
           const res = await fetch('/api/bridge/status');
           const json = await res.json();
           setStatus(json);
+          applyAuto(json);
           if (json?.origin && !origin) setOrigin(json.origin);
           return json;
         } catch (error) {
           setToast({ tone: 'err', text: error.message });
           return null;
         }
-      }, [origin]);
+      }, [origin, applyAuto]);
 
       useEffect(() => { refresh(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -317,6 +342,23 @@
         } catch (error) { setToast({ tone: 'err', text: error.message }); }
         finally { setBusy(false); }
       }, [status, refresh]);
+
+      const saveAuto = useCallback(async (nextEnabled, nextInterval) => {
+        setAutoBusy(true); setToast(null);
+        try {
+          const res = await fetch('/api/bridge/auto-sync', {
+            method: 'POST', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ enabled: nextEnabled, intervalSec: Number(nextInterval) || 120 }),
+          });
+          const json = await res.json();
+          if (!res.ok || json.ok === false) throw new Error(json.error ?? 'auto-sync failed');
+          applyAuto(json);
+          setAutoEnabled(Boolean(json.enabled));
+          setAutoInterval(Number(json.intervalSec) || 120);
+          setToast({ tone: 'ok', text: tr('autoSaved') });
+        } catch (error) { setToast({ tone: 'err', text: error.message }); }
+        finally { setAutoBusy(false); }
+      }, [applyAuto]);
 
       const counts = status?.counts ?? {};
       const connected = Boolean(status?.bound);
@@ -381,6 +423,36 @@
               title: tr('refresh'),
             }, h(Icon, { d: ICONS.refresh, size: 13 }), tr('refresh')),
           ),
+        ),
+
+        // ---- auto-sync card ----
+        h('section', { className: 'wsb-card' },
+          h('div', { className: 'wsb-card-h' },
+            h('b', null, tr('autoSync')),
+            h('span', { className: 'wsb-pill', 'data-on': autoEnabled ? '1' : '0' },
+              h('i'), autoEnabled ? tr('autoOn') : tr('autoOff')),
+          ),
+          h('p', { className: 'wsb-hint' }, tr('autoSyncHint')),
+          h('div', { className: 'wsb-actions' },
+            h('button', {
+              className: 'wsb-btn', 'data-primary': autoEnabled ? '0' : '1',
+              disabled: autoBusy,
+              onClick: () => saveAuto(!autoEnabled, autoInterval),
+            }, autoEnabled ? tr('autoOff') : tr('autoOn')),
+            h('label', { className: 'wsb-field', style: { flex: 1, maxWidth: 170 } },
+              h('span', null, tr('autoInterval')),
+              h('input', {
+                className: 'wsb-input', type: 'number', min: 30,
+                value: autoInterval,
+                onChange: (e) => setAutoInterval(e.target.value),
+                disabled: autoBusy,
+              }),
+            ),
+            h('button', {
+              className: 'wsb-btn', disabled: autoBusy, onClick: () => saveAuto(autoEnabled, autoInterval),
+            }, tr('refresh')),
+          ),
+          h('p', { className: 'wsb-hint' }, tr('autoMinHint')),
         ),
 
         // ---- mirror stats ----

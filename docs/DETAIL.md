@@ -19,11 +19,10 @@
                                                        (权威源 + /changes 增量)
 ```
 
-- **Host 半（index.js）**：打开 SQLite，注册 8 个工具、`/api/bridge/*` loopback 路由、
-  系统提示段落；所有资源用 `ctx.effect` 管理并返 cleanup。DB 打不开时走 `applyDegraded`
-  （只提示，不注册功能）。
-- **Client 半（client.js）**：`window.__ModuleLoader__.load` 注册 React 组件，挂到
-  `shell.overlay`，通过 loopback 路由调 Host service；文案走 locale 服务。
+- **Host 半（index.js）**：打开 SQLite，注册 9 个工具（含 `bridge_auto_sync`）、`/api/bridge/*` loopback 路由（含 `/api/bridge/auto-sync`）、系统提示段落与自管理自动同步定时器；所有资源用 `ctx.effect` 管理并返 cleanup。DB 打不开时走 `applyDegraded`（只提示，不注册功能）。
+- **Client 半（client.js）**：`window.__ModuleLoader__.load` 注册 React 组件，挂到侧栏
+  `sidebar.panellist` + `main` slot，通过 loopback 路由调 Host service；文案走 locale 服务；
+  面板含绑定 / 状态 / 手动同步 / **自动同步开关与间隔**卡片。
 - **service.js**：唯一的写入口（dsh-doc「一个操作两个调用方」）。`create/update/remove`
   只写镜像并标脏；`sync()` 先 pull 后 push。
 - **db.js**：`node:sqlite` 的 `DatabaseSync`，零原生依赖；`user_version` 迁移，
@@ -40,6 +39,13 @@
 3. **冲突**：远端变更撞上本地 dirty → 保留本地，冲突明细在 `bridge_sync` 返回值。
 4. **删除**：本地墓碑 → 同步时 Halo 硬删（Halo 侧墓碑仅由同步日志承担）→ 成功后
    从镜像删除该行。
+5. **自动同步（2026-11-20 新增）**：`bridge_auto_sync` / 面板「自动同步」卡片配置，
+   默认关闭。开启后 DSH 侧自管理定时器按间隔（默认 120s，最小 30s）自动跑一轮完整
+   `sync()`（pull + push），无需公网/内网穿透——Halo 在服务器访问不到本机，由 DSH
+   主动发起双向同步最可靠。偏好存 `sync_state`（`autoSync` / `autoSyncIntervalSec`），
+   重启继续生效；cordis 无 timer 服务，定时器由 service 自管理并通过 `ctx.effect`
+   注册 cleanup（热重载不残留）。未绑定或有同步在进行中时该轮 tick 跳过。
+   `test/auto-sync.mjs` 守住持久化/校验/tick 门控/定时器生命周期。
 
 ## 凭据
 
@@ -126,8 +132,8 @@
 
 ## 已知边界
 
-- 未做自动定时同步（V1 手动 `bridge_sync`）。
-- UI 是最简面板（绑定/状态/同步），详细列表与编辑仍以 agent 工具与 Halo 页面为主。
+- 支持自动同步（默认关闭）：在面板「自动同步」卡片或 `bridge_auto_sync` 开启后可按时自动双向 `sync()`；关闭时仍可手动 `bridge_sync`。
+- UI 面板含绑定 / 状态 / 手动同步 / 自动同步设置；详细列表与编辑仍以 agent 工具与 Halo 页面为主。
 - 每页拉取上限 500，最多 20 页；超出需在后续 `bridge_sync` 继续。
 - Halo 侧日志上限 2000 条，超出裁掉最旧 200 条；长期离线后游标落后于最旧日志时需
   全量重新拉取（快照回退机制已实现，见上节）。

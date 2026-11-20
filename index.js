@@ -111,6 +111,19 @@ function makeRoutes(service) {
     },
     {
       kind: 'exact',
+      path: '/api/bridge/auto-sync',
+      handler: guard('POST', async (req, res) => {
+        try {
+          const body = await parseJsonBody(req);
+          json(res, 200, service.setAutoSync({
+            enabled: body.enabled,
+            intervalSec: body.intervalSec,
+          }));
+        } catch (error) { json(res, 400, { ok: false, error: error.message }); }
+      }),
+    },
+    {
+      kind: 'exact',
       path: '/api/bridge/status',
       handler: guard('GET', async (_req, res) => {
         try { json(res, 200, await service.status()); }
@@ -190,6 +203,11 @@ function applyReady(ctx, config, db) {
     const disposers = tools.map((tool) => ctx.tools.register(tool));
     return () => disposers.forEach((dispose) => dispose?.());
   }, 'bridge: tools');
+
+  ctx.effect(() => {
+    service.startAutoTimer();
+    return () => service.stopAutoTimer();
+  }, 'bridge: auto-sync timer');
 
   ctx.effect(() => {
     const disposers = makeRoutes(service).map((route) => ctx.webServer.register(route));

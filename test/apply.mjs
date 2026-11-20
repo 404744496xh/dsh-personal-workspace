@@ -43,16 +43,16 @@ try {
 
   const toolNames = ctx.reg.tools.map((t) => t.name);
   const expected = [
-    'bridge_bind', 'bridge_status', 'bridge_sync', 'bridge_list',
+    'bridge_bind', 'bridge_status', 'bridge_sync', 'bridge_auto_sync', 'bridge_list',
     'bridge_get', 'bridge_create', 'bridge_update', 'bridge_delete',
   ];
   for (const n of expected) {
     assert.ok(toolNames.includes(n), `tool ${n} was not registered; got ${JSON.stringify(toolNames)}`);
   }
-  assert.equal(ctx.reg.routes.length, 5, 'expected 5 loopback routes');
+  assert.equal(ctx.reg.routes.length, 6, 'expected 6 loopback routes');
   assert.ok(ctx.reg.sections.some((s) => s.name === 'plugin:dsh-personal-workspace'), 'system prompt section missing');
   assert.ok(!ctx.reg.sections.some((s) => s.name.includes('degraded')), 'must not be degraded with empty config');
-  assert.equal(ctx.reg.cleanups.length, 4, 'expected 4 effect cleanups');
+  assert.equal(ctx.reg.cleanups.length, 5, 'expected 5 effect cleanups (incl. auto-sync timer)');
   // Dispose everything (db close included) to confirm cleanups are callable.
   for (const dispose of ctx.reg.cleanups) dispose?.();
   console.log('APPLY TEST PASSED:', toolNames.length, 'tools,', ctx.reg.routes.length, 'routes,', ctx.reg.sections.length, 'prompt sections');
