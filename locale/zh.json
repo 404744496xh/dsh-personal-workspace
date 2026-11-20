@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "个人工作台",
+    "description": "以 agent 为一等公民的待办/项目/笔记工作台，与 Halo 个人工作台双向同步。",
+    "detail": "docs/DETAIL.md"
+  }
+}

@@ -1,0 +1,4 @@
+- insert:
+    - id: dsh-personal-workspace
+      name: '@local/dsh-personal-workspace'
+      config: {}

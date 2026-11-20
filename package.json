@@ -1,0 +1,36 @@
+{
+  "name": "@local/dsh-personal-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "DSH plugin: agent-first workspace with two-way sync to a Halo personal-workspace site",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "lib/**/*.js",
+    "locale/*.json",
+    "docs",
+    "icon.svg",
+    "README.md"
+  ],
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-tools": "^0.1.0-rc.6 || ^0.2.0-rc.1"
+  },
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  }
+}
