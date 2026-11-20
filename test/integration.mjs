@@ -180,8 +180,8 @@ try {
   assert.ok(created.name.startsWith('local-'));
   service.update('todo', 'todo-1', { title: '本地改过的标题' });
   service.remove('note', 'note-1');
-  assert.equal(service.status().counts.todo.dirty, 2);
-  assert.equal(service.status().counts.note.tombstones, 1);
+  assert.equal((await service.status()).counts.todo.dirty, 2);
+  assert.equal((await service.status()).counts.note.tombstones, 1);
   const second = await service.sync();
   assert.equal(second.errors.length, 0, `push errors: ${JSON.stringify(second.errors)}`);
   assert.equal(second.pushed, 3, 'create + update + delete should all be pushed');
@@ -220,7 +220,7 @@ try {
   assert.equal(fifth.pushed, 0, 'no dirty rows left to push');
   console.log('  [ok] steady-state sync pulls and pushes nothing');
 
-  const status = service.status();
+  const status = await service.status();
   console.log(`  status: cursor=${status.cursor} counts=${JSON.stringify(status.counts)}`);
   console.log('INTEGRATION TEST PASSED');
 } finally {

@@ -87,6 +87,17 @@
     200 空源拉不到任何历史数据 → 镜像永远空「拉取 0 条」。已改为首次同步（镜像为空）主动
     bootstrap 全量列表，并用一次 `/changes` 探测区分模式：健康源报 `bootstrap`、老站点报
     `snapshot`+升级提示；建好 cursor 后转增量。`test/bootstrap.mjs` 守住。
+     ⑦ 绑定状态重启即丢：凭据其实已完整持久化在 `~/.dsh/.credentials.yaml` 的
+     `dsh-workspace-bridge/halo` grant 记录（token + origin），但 `status()` 只读内存里的
+     `boundClient`（`bind()` 时才有，重启即空），而 `config.haloOrigin` 从没设置 → 重启后
+     `status().origin=null`，UI 显示「未绑定」并禁用同步，逼用户重粘 PAT，尽管 `sync()`
+     走 `client()→_storedCredential()` 本可用持久凭据。已修复：`status()` 改为 async，
+     从 `_storedCredential()` 读持久化 origin + `bound:true`（只回布尔，绝不回传 token）；
+     UI 的 `connected` 改用 `status.bound`，token 框留空且已绑定时允许只改地址——新增
+     `service.bindOrigin()`（沿用已存 token），`/api/bridge/bind` 在 token 留空时走它。
+     `test/persist-binding.mjs` 模拟重启（新 service + 同一凭据库 + 无内存 boundClient）
+     守住 bound/origin 恢复、token 不泄露、仅改地址复用令牌。
+
 ## /changes 403 → 全量快照回退（2026-11-20）
 
 - 用户实测 `Halo GET /changes?since=0&limit=200 failed (403): 403`。只读探测定位：

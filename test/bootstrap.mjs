@@ -105,7 +105,7 @@ try {
   assert.equal(service.get('todo', 't1').title, '本地改动');
   console.log('  [ok] subsequent sync is incremental; local edits preserved');
 
-  const status = service.status();
+  const status = await service.status();
   console.log(`  status: pullMode=${status.pullMode} counts=${JSON.stringify(status.counts)}`);
   console.log('BOOTSTRAP TEST PASSED');
 } finally {

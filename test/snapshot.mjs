@@ -125,7 +125,7 @@ try {
   console.log('  [ok] snapshot reconciles remote deletions');
 
   // 4. status() surfaces pullMode.
-  assert.equal(service.status().pullMode, 'snapshot');
+  assert.equal((await service.status()).pullMode, 'snapshot');
   console.log('  [ok] status() reports pullMode=snapshot');
   console.log('SNAPSHOT FALLBACK TEST PASSED');
 } finally {

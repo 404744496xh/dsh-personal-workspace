@@ -24,6 +24,7 @@
       originPlaceholder: 'https://www.xiahan.asia',
       token: '访问令牌（PAT）',
       tokenPlaceholder: '粘贴 Halo 个人访问令牌',
+      tokenKeepHint: '留空则沿用已保存的令牌',
       bind: '绑定站点',
       binding: '绑定中…',
       sync: '立即同步',
@@ -61,6 +62,7 @@
       originPlaceholder: 'https://www.xiahan.asia',
       token: 'Access token (PAT)',
       tokenPlaceholder: 'Paste your Halo personal access token',
+      tokenKeepHint: 'Leave blank to keep the saved token',
       bind: 'Bind site',
       binding: 'Binding…',
       sync: 'Sync now',
@@ -158,6 +160,7 @@
 .wsb-hint{margin:0 0 14px;font-size:11.5px;color:var(--wsb-dim)}
 .wsb-field{display:block;margin-bottom:11px}
 .wsb-field>span{display:block;font-size:11px;font-weight:600;color:var(--wsb-dim);margin-bottom:5px}
+.wsb-sub{font-style:normal;font-weight:400;opacity:.75}
 .wsb-input{width:100%;padding:9px 11px;border-radius:var(--wsb-rs);border:1px solid var(--wsb-line);background:var(--wsb-surface-2);outline:none;transition:border-color .15s,box-shadow .15s}
 .wsb-input::placeholder{color:var(--wsb-dim);opacity:.7}
 .wsb-input:focus{border-color:var(--wsb-brand);box-shadow:0 0 0 3px color-mix(in srgb,var(--wsb-brand) 18%,transparent)}
@@ -275,7 +278,10 @@
       useEffect(() => { refresh(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
       const bind = useCallback(async () => {
-        if (!origin.trim() || !token.trim()) {
+        // When already bound, an empty token means "keep the saved PAT and only
+        // update the site URL". Otherwise both fields are required.
+        const keepToken = Boolean(status?.bound) && !token.trim();
+        if (!origin.trim() || (!token.trim() && !keepToken)) {
           setToast({ tone: 'err', text: tr('inputRequired') });
           return;
         }
@@ -292,10 +298,10 @@
           await refresh();
         } catch (error) { setToast({ tone: 'err', text: error.message }); }
         finally { setBindBusy(false); }
-      }, [origin, token, refresh]);
+      }, [origin, token, status, refresh]);
 
       const sync = useCallback(async () => {
-        if (!status?.origin) {
+        if (!status?.bound) {
           setToast({ tone: 'err', text: tr('needBind') });
           return;
         }
@@ -313,7 +319,7 @@
       }, [status, refresh]);
 
       const counts = status?.counts ?? {};
-      const connected = Boolean(status?.origin);
+      const connected = Boolean(status?.bound);
       const anyData = ['todo', 'project', 'note'].some((k) => (counts[k]?.total ?? 0) > 0);
       const conflicts = status?.pendingConflicts ?? [];
       const errors = status?.pendingErrors ?? [];
@@ -353,7 +359,7 @@
             }),
           ),
           h('label', { className: 'wsb-field' },
-            h('span', null, tr('token')),
+            h('span', null, tr('token'), connected ? h('em', { className: 'wsb-sub' }, ' · ' + tr('tokenKeepHint')) : null),
             h('input', {
               className: 'wsb-input', type: 'password', value: token,
               onChange: (e) => setToken(e.target.value),
@@ -363,7 +369,7 @@
           h('div', { className: 'wsb-actions' },
             h('button', {
               className: 'wsb-btn', 'data-primary': '1',
-              disabled: bindBusy || busy || !origin.trim() || !token.trim(), onClick: bind,
+              disabled: bindBusy || busy || !origin.trim() || (!token.trim() && !connected), onClick: bind,
             }, bindBusy ? h('span', { className: 'wsb-spin' }) : h(Icon, { d: ICONS.link }),
               bindBusy ? tr('binding') : tr('bind')),
             h('button', {

@@ -134,8 +134,11 @@ function makeRoutes(service) {
       handler: guard('POST', async (req, res) => {
         try {
           const body = await parseJsonBody(req);
-          if (!body.origin || !body.token) throw new Error('origin 与 token 必填');
-          const bound = await service.bind(body.origin, body.token);
+          if (!body.origin) throw new Error('origin 必填');
+          // Empty token means "keep the already-persisted PAT, only update URL".
+          const bound = (typeof body.token === 'string' && body.token.trim())
+            ? await service.bind(body.origin, body.token)
+            : await service.bindOrigin(body.origin);
           json(res, 200, { ok: true, ...bound, ...(await service.tokenInfo()) });
         } catch (error) { json(res, 400, { ok: false, error: error.message }); }
       }),
