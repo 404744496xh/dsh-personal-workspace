@@ -282,7 +282,7 @@ function applyReady(ctx, config, db) {
 
 export function apply(ctx, config = {}) {
   try {
-    const db = openMirrorDb(config.dbPath);
+    const db = openMirrorDb(config);
     applyReady(ctx, config, db);
   } catch (error) {
     applyDegraded(ctx, error);
