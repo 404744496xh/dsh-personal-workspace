@@ -45,11 +45,15 @@ try {
   const expected = [
     'bridge_bind', 'bridge_status', 'bridge_sync', 'bridge_auto_sync', 'bridge_list',
     'bridge_get', 'bridge_create', 'bridge_update', 'bridge_delete',
+    'bridge_task_today', 'bridge_task_plan', 'bridge_task_step', 'bridge_task_submit',
+    'bridge_task_flags', 'bridge_task_bind', 'bridge_task_tail', 'bridge_task_report',
+    'bridge_task_capture',
   ];
   for (const n of expected) {
     assert.ok(toolNames.includes(n), `tool ${n} was not registered; got ${JSON.stringify(toolNames)}`);
   }
-  assert.equal(ctx.reg.routes.length, 6, 'expected 6 loopback routes');
+  assert.equal(toolNames.length, 18, 'expected 18 tools');
+  assert.equal(ctx.reg.routes.length, 10, 'expected 10 loopback routes');
   assert.ok(ctx.reg.sections.some((s) => s.name === 'plugin:dsh-personal-workspace'), 'system prompt section missing');
   assert.ok(!ctx.reg.sections.some((s) => s.name.includes('degraded')), 'must not be degraded with empty config');
   assert.equal(ctx.reg.cleanups.length, 5, 'expected 5 effect cleanups (incl. auto-sync timer)');

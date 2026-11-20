@@ -53,6 +53,31 @@
 `{token, origin}`）。这样绑定是一次原子操作，不需要改写 `cordis.patch.yml` 或插件配置；
 `status()` 展示的是当前生效的 origin（绑定值优先于 config 默认值）。
 
+## 任务执行闭环（DSH 原生价值，2026-11-20）
+
+这是本插件与「纯 Halo MCP」的核心区别：Halo 的数据模型里没有步骤、证据、验收状态，
+这些全部存在本地 SQLite 的 `task_meta` 表（schema v2），Halo 仍是业务数据权威源。
+
+- **拆步骤**：`bridge_task_plan` 把待办拆成编号步骤（最多 50 步），重规划会重置验收状态。
+- **推进步骤**：`bridge_task_step` 改状态（todo/doing/done）并附 `evidence`（用户原话
+  引用或产物引用，保留最近 20 条）；步骤自动绑定调用方会话 id（`exec.agent?.id`）。
+- **提交验收**：`bridge_task_submit` 要求所有步骤 done，只有通过才置 `review=pending`。
+- **人工闸门（硬性安全边界）**：`review` 只能由 UI 的 `/api/bridge/task` 路由触发，
+  **不注册为 agent 工具**——agent 永远不能自己判定任务完成。人工 accept 时 service
+  才把镜像 todo 的 `completed` 翻成 true，再由现有同步引擎推送到 Halo。
+- 任一已验收任务的步骤被改动，验收状态自动回退 `draft`。
+- **会话关联与回读**：`bridge_task_bind` 绑定会话；`bridge_task_tail` 经宿主
+  `sessionQuery.readSession(id)` 取 `events.slice(-N)`（该服务未挂载时优雅降级返回
+  `unavailable`，不抛错）。
+- **今日视图**：`bridge_task_today` / `GET /api/bridge/task/today` 输出
+  overdue / today / soon / someday 分组 + 统计（待处理、今日到期、逾期、待验收）。
+  `planDay` 用确定性打分排序（配额 > 优先级 > 逾期天数 > 待验收 > 今日到期）。
+- **日报/周报**：`bridge_task_report` / `POST /api/bridge/report` 生成 Markdown，
+  可选 `saveAsNote` 直接存为 Halo 笔记。
+- **快速捕获去重**：`bridge_task_capture` / `POST /api/bridge/capture` 用 bigram Dice
+  相似度（阈值 0.8、72 小时窗口）提示近似重复待办。
+- **任务增强标记**：`bridge_task_flags` 设置 someday（稍后）与 quota（must/should/could）。
+
 ## 端到端联调（已完成 2026-11-20）
 
 - `test/apply.mjs`：mock cordis ctx 直接跑 `apply()`，确认 8 工具 + 5 路由 + 系统提示
@@ -133,7 +158,9 @@
 ## 已知边界
 
 - 支持自动同步（默认关闭）：在面板「自动同步」卡片或 `bridge_auto_sync` 开启后可按时自动双向 `sync()`；关闭时仍可手动 `bridge_sync`。
-- UI 面板含绑定 / 状态 / 手动同步 / 自动同步设置；详细列表与编辑仍以 agent 工具与 Halo 页面为主。
+- UI 面板含绑定 / 状态 / 手动同步 / 自动同步设置 / 今日与任务视图 / 任务详情卡（拆步骤、
+  推进步骤、提交验收、人工通过·打回、稍后与配额、绑定会话）/ 日报周报 / 快速录入；
+  完整的批量编辑仍以 agent 工具与 Halo 页面为主。
 - 每页拉取上限 500，最多 20 页；超出需在后续 `bridge_sync` 继续。
 - Halo 侧日志上限 2000 条，超出裁掉最旧 200 条；长期离线后游标落后于最旧日志时需
   全量重新拉取（快照回退机制已实现，见上节）。

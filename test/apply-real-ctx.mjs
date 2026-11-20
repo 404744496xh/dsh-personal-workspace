@@ -71,17 +71,20 @@ ctx.provide('webServer', {
 const handle = ctx.plugin(plugin, { dbPath: ':memory:' });
 await handle.await();
 
-assert.equal(tools.length, 9, `expected 9 tools, got ${tools.length}: ${tools.map((t) => t.name).join(',')}`);
-assert.equal(routes.length, 6, `expected 6 routes, got ${routes.length}`);
+assert.equal(tools.length, 18, `expected 18 tools, got ${tools.length}: ${tools.map((t) => t.name).join(',')}`);
+assert.equal(routes.length, 10, `expected 10 routes, got ${routes.length}`);
 assert.equal(sections.length, 1, `expected 1 prompt section, got ${sections.length}`);
 assert.deepEqual(
   tools.map((t) => t.name).sort(),
   [
     'bridge_bind', 'bridge_status', 'bridge_sync', 'bridge_auto_sync', 'bridge_list',
     'bridge_get', 'bridge_create', 'bridge_update', 'bridge_delete',
+    'bridge_task_today', 'bridge_task_plan', 'bridge_task_step', 'bridge_task_submit',
+    'bridge_task_flags', 'bridge_task_bind', 'bridge_task_tail', 'bridge_task_report',
+    'bridge_task_capture',
   ].sort(),
 );
-console.log('REAL CORDIS CONTEXT TEST PASSED: 9 tools, 6 routes, 1 prompt section');
+console.log('REAL CORDIS CONTEXT TEST PASSED: 18 tools, 10 routes, 1 prompt section');
 
 // Disposal must remove every registration (hot-reload safety).
 await handle.dispose();

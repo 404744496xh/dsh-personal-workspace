@@ -168,6 +168,69 @@ function makeRoutes(service) {
         } catch (error) { json(res, 400, { ok: false, error: error.message }); }
       }),
     },
+    {
+      // Today view: overdue/today/soon/someday groups + smart-ordered plan.
+      kind: 'exact',
+      path: '/api/bridge/task/today',
+      handler: guard('GET', (_req, res) => {
+        try { json(res, 200, { ok: true, ...service.taskToday() }); }
+        catch (error) { json(res, 400, { ok: false, error: error.message }); }
+      }),
+    },
+    {
+      // Task-loop operations dispatched by `op`. NOTE: `review` (the human
+      // accept/reject gate) is reachable ONLY through this loopback UI route —
+      // it is deliberately NOT registered as an agent tool.
+      kind: 'exact',
+      path: '/api/bridge/task',
+      handler: guard('POST', async (req, res) => {
+        try {
+          const b = await parseJsonBody(req);
+          const n = b.todoName;
+          let out;
+          switch (b.op) {
+            case 'plan': out = service.taskPlan(n, b.goal, b.steps); break;
+            case 'step': out = service.taskStep(n, { index: b.index, status: b.status, evidence: b.evidence }); break;
+            case 'submit': out = service.taskSubmit(n, b.note); break;
+            case 'review': out = service.taskReview(n, { decision: b.decision, note: b.note }); break;
+            case 'flags': out = service.taskFlags(n, { someday: b.someday, quota: b.quota }); break;
+            case 'bind': {
+              out = service.taskBind(n, b.sessionId, b.tail);
+              const tailRead = await service.taskSessionTail(n, 30);
+              const tailText = (tailRead?.tail ?? []).map((e) => e.text).filter(Boolean).join('\n');
+              // UI reads `json.tail` at top level after a bind.
+              return json(res, 200, { ok: true, result: out, tail: tailText });
+            }
+            default: throw new Error(`未知操作 op=${b.op}`);
+          }
+          json(res, 200, { ok: true, result: out });
+        } catch (error) { json(res, 400, { ok: false, error: error.message }); }
+      }),
+    },
+    {
+      kind: 'exact',
+      path: '/api/bridge/report',
+      handler: guard('POST', async (req, res) => {
+        try {
+          const b = await parseJsonBody(req);
+          json(res, 200, { ok: true, ...await service.taskReport({
+            type: b.type, from: b.from, to: b.to, saveAsNote: b.saveToNote,
+          }) });
+        } catch (error) { json(res, 400, { ok: false, error: error.message }); }
+      }),
+    },
+    {
+      kind: 'exact',
+      path: '/api/bridge/capture',
+      handler: guard('POST', async (req, res) => {
+        try {
+          const b = await parseJsonBody(req);
+          json(res, 200, { ok: true, ...service.taskCapture(b.title, {
+            detail: b.detail, priority: b.priority, dueDate: b.dueDate,
+          }) });
+        } catch (error) { json(res, 400, { ok: false, error: error.message }); }
+      }),
+    },
   ];
   return routes;
 }

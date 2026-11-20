@@ -1,6 +1,6 @@
 {
   "name": "@local/dsh-personal-workspace",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "DSH plugin: agent-first workspace with two-way sync to a Halo personal-workspace site",
